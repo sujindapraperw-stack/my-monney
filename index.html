@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตัวจับเวลา + ตารางนับรอบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10161c;
+    --card: #1a222b;
+    --card-border: #263140;
+    --amber: #f2a65a;
+    --teal: #4fc4b8;
+    --danger: #e8615a;
+    --green: #6fcf73;
+    --text: #f4f0e6;
+    --text-dim: #93a1ae;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: radial-gradient(circle at 20% -10%, #1b2530 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:'Noto Sans Thai','IBM Plex Mono',sans-serif;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;}
+  header{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  h1{
+    font-size:26px;
+    font-weight:700;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  h1 .mono{
+    font-family:'IBM Plex Mono',monospace;
+    color:var(--amber);
+  }
+  .sub{color:var(--text-dim);font-size:14px;margin-top:4px;}
+  .save-status{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:14px;
+    min-height:16px;
+  }
+  .save-status.ok{color:var(--teal);}
+  .save-status.err{color:var(--danger);}
+
+  /* ---- Tabs ---- */
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--card-border);
+  }
+  .tab-btn{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:600;
+    padding:10px 4px 14px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+  .tab-btn.active{color:var(--amber);border-bottom-color:var(--amber);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* ---- Sound settings ---- */
+  .sound-card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:16px 18px;
+    margin-bottom:22px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .sound-icon{font-size:22px;}
+  .sound-info{flex:1;min-width:180px;}
+  .sound-title{font-size:13px;font-weight:600;}
+  .sound-name{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .sound-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .sound-btn{
+    border:1px solid var(--card-border);
+    background:#0d1319;
+    color:var(--text);
+    border-radius:9px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .sound-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .sound-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+  #soundFileInput{display:none;}
+
+  .add-form{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:18px;
+    display:grid;
+    grid-template-columns: 1.4fr 0.6fr 0.6fr 0.6fr;
+    gap:10px 12px;
+    margin-bottom:28px;
+  }
+  .add-form label{
+    font-size:12px;
+    color:var(--text-dim);
+    display:block;
+    margin-bottom:6px;
+  }
+  .add-form input{
+    width:100%;
+    background:#0d1319;
+    border:1px solid var(--card-border);
+    border-radius:10px;
+    color:var(--text);
+    padding:10px 12px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+  }
+  .add-form input[type=text]{font-family:'Noto Sans Thai',sans-serif;}
+  .add-form input:focus{outline:2px solid var(--amber);outline-offset:1px;}
+
+  .color-row{grid-column:1/-1;}
+  .swatches{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;}
+  .swatch{
+    width:28px;height:28px;border-radius:50%;
+    border:2px solid transparent;cursor:pointer;
+    padding:0;
+  }
+  .swatch.selected{border-color:#fff;box-shadow:0 0 0 2px #10161c, 0 0 0 4px currentColor;}
+
+  .add-btn{
+    grid-column:1/-1;
+    background:var(--amber);
+    color:#1a1204;
+    border:none;
+    border-radius:10px;
+    padding:11px 18px;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .add-btn:hover{filter:brightness(1.08);}
+  .add-btn:focus-visible{outline:2px solid var(--text);outline-offset:2px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:16px;
+  }
+  .empty{
+    color:var(--text-dim);
+    text-align:center;
+    padding:60px 20px;
+    border:1px dashed var(--card-border);
+    border-radius:16px;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:18px;
+    padding:20px;
+    position:relative;
+    overflow:hidden;
+    transition:border-color .25s, box-shadow .25s;
+  }
+  .card.colored{border-color:var(--tcolor);}
+  .card.done{
+    border-color:var(--tcolor);
+    box-shadow:0 0 0 1px var(--tcolor), 0 0 24px -4px var(--tcolor);
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 1px var(--tcolor), 0 0 20px -6px var(--tcolor);}
+    50%{box-shadow:0 0 0 1px var(--tcolor), 0 0 34px 2px var(--tcolor);}
+  }
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .card-name{
+    font-weight:600;
+    font-size:16px;
+    word-break:break-word;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--tcolor);
+    flex-shrink:0;
+  }
+  .remove-btn{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:18px;
+    line-height:1;
+    padding:2px 4px;
+    border-radius:6px;
+  }
+  .remove-btn:hover{color:var(--danger);}
+
+  .ring-wrap{
+    display:flex;
+    justify-content:center;
+    margin:6px 0 14px;
+    position:relative;
+  }
+  svg.ring{transform:rotate(-90deg);}
+  .ring-bg{fill:none;stroke:#25313d;stroke-width:9;}
+  .ring-fg{fill:none;stroke:var(--tcolor);stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset .3s linear;}
+  .ring-center{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+  }
+  .time-display{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:26px;
+    font-weight:600;
+    letter-spacing:0.5px;
+  }
+  .time-label{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+
+  .controls{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+  }
+  .ctrl-btn{
+    flex:1;
+    border:1px solid var(--card-border);
+    background:#0d1319;
+    color:var(--text);
+    border-radius:10px;
+    padding:9px 0;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .ctrl-btn.primary{background:var(--tcolor);color:#1a1204;border-color:var(--tcolor);}
+  .ctrl-btn:hover{filter:brightness(1.12);}
+  .ctrl-btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+
+  /* full screen alert overlay */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(10,6,4,0.88);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .overlay.show{display:flex;}
+  .alert-box{
+    background:var(--card);
+    border:2px solid var(--tcolor, var(--danger));
+    border-radius:22px;
+    padding:36px 30px;
+    text-align:center;
+    max-width:380px;
+    width:100%;
+    box-shadow:0 0 60px -8px var(--tcolor, var(--danger));
+    animation:pop .3s ease;
+  }
+  @keyframes pop{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .alert-icon{font-size:48px;margin-bottom:10px;}
+  .alert-title{font-size:22px;font-weight:700;margin-bottom:6px;}
+  .alert-name{color:var(--tcolor, var(--amber));font-weight:700;font-size:19px;margin-bottom:22px;font-family:'IBM Plex Mono',monospace;}
+  .alert-btn{
+    background:var(--tcolor, var(--danger));
+    border:none;
+    color:#1a1204;
+    font-weight:700;
+    padding:12px 28px;
+    border-radius:12px;
+    font-size:15px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .alert-btn:hover{filter:brightness(1.1);}
+
+  /* ---- Grid tracker (farm counter) ---- */
+  .gt-add{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:18px;
+    display:grid;
+    grid-template-columns:1.2fr 0.5fr 0.5fr 0.7fr auto;
+    gap:12px;
+    align-items:end;
+    margin-bottom:28px;
+  }
+  .gt-add label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;}
+  .gt-add input{
+    width:100%;
+    background:#0d1319;
+    border:1px solid var(--card-border);
+    border-radius:10px;
+    color:var(--text);
+    padding:10px 12px;
+    font-size:15px;
+  }
+  .gt-add input#gt-price, .gt-add input#gt-rows, .gt-add input#gt-cols{font-family:'IBM Plex Mono',monospace;}
+  .gt-add input:focus{outline:2px solid var(--amber);outline-offset:1px;}
+  .gt-add-btn{
+    background:var(--amber);
+    color:#1a1204;
+    border:none;
+    border-radius:10px;
+    padding:11px 18px;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .gt-add-btn:hover{filter:brightness(1.08);}
+
+  .gt-list{display:flex;flex-direction:column;gap:22px;}
+  .gt-card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:18px;
+    padding:20px;
+  }
+  .gt-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:6px;
+    flex-wrap:wrap;
+  }
+  .gt-name{font-weight:700;font-size:17px;}
+  .gt-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .gt-price-edit{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .gt-price-edit input{
+    width:100px;
+    background:#0d1319;
+    border:1px solid var(--card-border);
+    border-radius:8px;
+    color:var(--text);
+    padding:6px 8px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+  }
+  .gt-summary{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    margin:10px 0 16px;
+    font-size:13px;
+    color:var(--text-dim);
+  }
+  .gt-summary b{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+    color:var(--text);
+  }
+  .gt-summary .money b{color:var(--green);}
+  .gt-cells{
+    display:grid;
+    gap:5px;
+    margin-bottom:14px;
+  }
+  .gt-cell{
+    aspect-ratio:1;
+    border-radius:6px;
+    border:1px solid var(--card-border);
+    background:#2a1416;
+    color:#5c3a3a;
+    font-size:10px;
+    font-family:'IBM Plex Mono',monospace;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    user-select:none;
+    transition:background .12s, transform .08s, color .12s;
+  }
+  .gt-cell:hover{transform:scale(1.08);}
+  .gt-cell.done{
+    background:rgba(111,207,115,0.22);
+    border-color:var(--green);
+    color:var(--green);
+  }
+  .gt-cell.notdone{
+    background:rgba(232,97,90,0.14);
+    border-color:rgba(232,97,90,0.35);
+    color:rgba(232,97,90,0.7);
+  }
+  .gt-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .gt-btn{
+    border:1px solid var(--card-border);
+    background:#0d1319;
+    color:var(--text);
+    border-radius:10px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .gt-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .gt-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+
+  @media (max-width:640px){
+    .add-form{grid-template-columns:1fr 1fr;}
+    .add-form > div:first-child{grid-column:1/-1;}
+    .gt-add{grid-template-columns:1fr 1fr;}
+    .gt-add > div:first-child{grid-column:1/-1;}
+    .gt-add-btn{grid-column:1/-1;}
+    .gt-cells{gap:4px;}
+    .gt-cell{font-size:8px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .card.done{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>⏱ ตัวจับเวลา<span class="mono">ถอยหลัง</span></h1>
+      <div class="sub">จับเวลาหลายรายการ และตารางนับรอบคำนวณเงิน</div>
+    </div>
+  </header>
+  <div class="save-status" id="saveStatus"></div>
+
+  <div class="sound-card">
+    <div class="sound-icon">🔔</div>
+    <div class="sound-info">
+      <div class="sound-title">เสียงแจ้งเตือนเมื่อครบเวลา</div>
+      <div class="sound-name" id="soundName">ใช้เสียงบี๊บเริ่มต้น</div>
+    </div>
+    <div class="sound-actions">
+      <button class="sound-btn" id="soundTestBtn">▶ ทดสอบเสียง</button>
+      <button class="sound-btn" id="soundUploadBtn">📁 เลือกไฟล์เสียง</button>
+      <button class="sound-btn danger" id="soundClearBtn">ใช้เสียงเริ่มต้น</button>
+    </div>
+    <input type="file" id="soundFileInput" accept="audio/*">
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="timerTab">⏱ ตัวจับเวลา</button>
+    <button class="tab-btn" data-tab="gridTab">🟩 ตารางนับรอบ</button>
+  </div>
+
+  <!-- ============ TAB 1: TIMERS ============ -->
+  <div class="tab-panel active" id="timerTab">
+    <div class="add-form">
+      <div>
+        <label for="f-name">ชื่อรายการ</label>
+        <input type="text" id="f-name" placeholder="เช่น ต้มไข่, พักเบรก">
+      </div>
+      <div>
+        <label for="f-h">ชั่วโมง</label>
+        <input type="number" id="f-h" min="0" value="0">
+      </div>
+      <div>
+        <label for="f-m">นาที</label>
+        <input type="number" id="f-m" min="0" value="5">
+      </div>
+      <div>
+        <label for="f-s">วินาที</label>
+        <input type="number" id="f-s" min="0" value="0">
+      </div>
+      <div class="color-row">
+        <label>สีประจำรายการ</label>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <button class="add-btn" id="addBtn">+ เพิ่มตัวจับเวลา</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="emptyMsg">ยังไม่มีตัวจับเวลา — เพิ่มรายการแรกด้านบนได้เลย</div>
+  </div>
+
+  <!-- ============ TAB 2: GRID TRACKER ============ -->
+  <div class="tab-panel" id="gridTab">
+    <div class="gt-add">
+      <div>
+        <label for="gt-name">ชื่อรายการ</label>
+        <input type="text" id="gt-name" placeholder="เช่น ฟาร์มเงินตัวละคร A">
+      </div>
+      <div>
+        <label for="gt-rows">แถว</label>
+        <input type="number" id="gt-rows" min="1" max="50" value="10">
+      </div>
+      <div>
+        <label for="gt-cols">คอลัมน์</label>
+        <input type="number" id="gt-cols" min="1" max="50" value="10">
+      </div>
+      <div>
+        <label for="gt-price">ราคาต่อรอบ (บาท)</label>
+        <input type="number" id="gt-price" min="0" value="5000">
+      </div>
+      <button class="gt-add-btn" id="gtAddBtn">+ เพิ่มตาราง</button>
+    </div>
+
+    <div class="gt-list" id="gtList"></div>
+    <div class="empty" id="gtEmptyMsg">ยังไม่มีตารางนับรอบ — เพิ่มรายการแรกด้านบนได้เลย</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="alert-box" id="alertBox">
+    <div class="alert-icon">⏰</div>
+    <div class="alert-title">ถึงเวลาแล้ว!</div>
+    <div class="alert-name" id="alertName">—</div>
+    <button class="alert-btn" id="alertDismiss">รับทราบ / หยุดเสียง</button>
+  </div>
+</div>
+
+<script>
+const TIMERS_KEY = 'timers-state';
+const GRID_KEY = 'grid-trackers-state';
+const SOUND_KEY = 'custom-alarm-sound';
+const PALETTE = ['#f2a65a','#4fc4b8','#f2789f','#a78bfa','#60a5fa','#a3e635','#f87171','#fbbf24'];
+const MAX_SOUND_BYTES = 2 * 1024 * 1024; // base64 encoding adds ~35%, so keep raw file well under the 5MB storage cap
+
+let timers = [];
+let trackers = [];
+let idCounter = 1;
+let gtIdCounter = 1;
+let alarmCtx = null;
+let alarmInterval = null;
+let selectedColor = PALETTE[0];
+let saveTimerTimeout = null;
+let customSound = null; // {name, dataUrl}
+let customAudioEl = null;
+
+const overlay = document.getElementById('overlay');
+const alertBox = document.getElementById('alertBox');
+const alertName = document.getElementById('alertName');
+const grid = document.getElementById('grid');
+const emptyMsg = document.getElementById('emptyMsg');
+const swatchesEl = document.getElementById('swatches');
+const saveStatus = document.getElementById('saveStatus');
+const gtList = document.getElementById('gtList');
+const gtEmptyMsg = document.getElementById('gtEmptyMsg');
+const soundName = document.getElementById('soundName');
+const soundFileInput = document.getElementById('soundFileInput');
+
+// ---- tabs ----
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ---- color swatches (timers) ----
+PALETTE.forEach((c,i)=>{
+  const b = document.createElement('button');
+  b.className = 'swatch' + (i===0?' selected':'');
+  b.style.background = c;
+  b.style.color = c;
+  b.type = 'button';
+  b.title = c;
+  b.addEventListener('click', ()=>{
+    selectedColor = c;
+    [...swatchesEl.children].forEach(el=>el.classList.remove('selected'));
+    b.classList.add('selected');
+  });
+  swatchesEl.appendChild(b);
+});
+
+document.getElementById('addBtn').addEventListener('click', addTimer);
+document.getElementById('alertDismiss').addEventListener('click', dismissAlert);
+document.getElementById('gtAddBtn').addEventListener('click', addTracker);
+document.getElementById('soundUploadBtn').addEventListener('click', ()=>soundFileInput.click());
+document.getElementById('soundClearBtn').addEventListener('click', clearCustomSound);
+document.getElementById('soundTestBtn').addEventListener('click', testSound);
+soundFileInput.addEventListener('change', onSoundFileChosen);
+
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+// ---------- status ----------
+function showStatus(msg, cls){
+  saveStatus.textContent = msg;
+  saveStatus.className = 'save-status' + (cls ? ' '+cls : '');
+  if(cls === 'ok'){
+    clearTimeout(showStatus._t);
+    showStatus._t = setTimeout(()=>{ saveStatus.textContent=''; saveStatus.className='save-status'; }, 1500);
+  }
+}
+
+// ---------- persistence: custom sound ----------
+function onSoundFileChosen(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > MAX_SOUND_BYTES){
+    const mb = (file.size / (1024*1024)).toFixed(1);
+    showStatus(`ไฟล์เสียงใหญ่เกินไป (${mb}MB) — ต้องไม่เกิน 2MB ลองใช้คลิปเสียงสั้นๆ แทน`, 'err');
+    soundFileInput.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const candidate = { name: file.name, dataUrl: reader.result };
+    const previous = customSound;
+    try{
+      localStorage.setItem(SOUND_KEY, JSON.stringify(candidate));
+      customSound = candidate;
+      updateSoundLabel();
+      showStatus('บันทึกเสียงแล้ว ✓', 'ok');
+    }catch(err){
+      customSound = previous; // revert, don't pretend it saved
+      updateSoundLabel();
+      showStatus('บันทึกเสียงไม่สำเร็จ — ไฟล์อาจใหญ่เกินพื้นที่เก็บของเบราว์เซอร์ ลองไฟล์เล็กลง', 'err');
+    }
+  };
+  reader.readAsDataURL(file);
+  soundFileInput.value = '';
+}
+
+function clearCustomSound(){
+  customSound = null;
+  updateSoundLabel();
+  localStorage.removeItem(SOUND_KEY);
+  showStatus('เปลี่ยนกลับเป็นเสียงเริ่มต้นแล้ว ✓', 'ok');
+}
+
+function updateSoundLabel(){
+  soundName.textContent = customSound ? ('ไฟล์ที่ใช้: ' + customSound.name) : 'ใช้เสียงบี๊บเริ่มต้น';
+}
+
+function testSound(){
+  if(customSound){
+    const a = new Audio(customSound.dataUrl);
+    a.play().catch(()=>{});
+  } else {
+    beep();
+  }
+}
+
+function loadCustomSound(){
+  try{
+    const raw = localStorage.getItem(SOUND_KEY);
+    if(raw) customSound = JSON.parse(raw);
+  }catch(e){ customSound = null; }
+  updateSoundLabel();
+}
+
+// ---------- persistence: timers ----------
+function saveTimers(){
+  clearTimeout(saveTimerTimeout);
+  saveTimerTimeout = setTimeout(()=>{
+    const data = timers.map(t=>({
+      id:t.id, name:t.name, totalSec:t.totalSec, remainingSec:t.remainingSec,
+      running:t.running, done:t.done, color:t.color, targetEndTime:t.targetEndTime
+    }));
+    try{
+      localStorage.setItem(TIMERS_KEY, JSON.stringify(data));
+      showStatus('บันทึกแล้ว ✓', 'ok');
+    }catch(e){
+      showStatus('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'err');
+    }
+  }, 150);
+}
+
+function loadTimers(){
+  let raw = [];
+  try{
+    const stored = localStorage.getItem(TIMERS_KEY);
+    if(stored) raw = JSON.parse(stored);
+  }catch(e){ raw = []; }
+  raw.forEach(d=>{
+    const t = { ...d, intervalId:null };
+    if(t.running && t.targetEndTime){
+      const remaining = Math.round((t.targetEndTime - Date.now())/1000);
+      if(remaining <= 0){
+        t.remainingSec = 0; t.running = false; t.done = true; t.targetEndTime = null;
+      } else {
+        t.remainingSec = remaining;
+      }
+    }
+    timers.push(t);
+    idCounter = Math.max(idCounter, t.id+1);
+    if(t.running) resumeInterval(t.id);
+  });
+  render();
+}
+
+// ---------- persistence: grid trackers ----------
+function saveTrackers(){
+  try{
+    localStorage.setItem(GRID_KEY, JSON.stringify(trackers));
+    showStatus('บันทึกแล้ว ✓', 'ok');
+  }catch(e){
+    showStatus('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'err');
+  }
+}
+
+function loadTrackers(){
+  let raw = [];
+  try{
+    const stored = localStorage.getItem(GRID_KEY);
+    if(stored) raw = JSON.parse(stored);
+  }catch(e){ raw = []; }
+  raw.forEach(d=>{
+    const rows = d.rows || 10;
+    const cols = d.cols || 10;
+    const total = rows * cols;
+    if(!Array.isArray(d.cells) || d.cells.length !== total){
+      d.cells = new Array(total).fill(false);
+    }
+    d.rows = rows; d.cols = cols;
+    trackers.push(d);
+    gtIdCounter = Math.max(gtIdCounter, d.id+1);
+  });
+  renderTrackers();
+}
+
+// ---------- timer logic ----------
+function addTimer(){
+  const name = document.getElementById('f-name').value.trim() || 'ไม่มีชื่อ';
+  const h = parseInt(document.getElementById('f-h').value) || 0;
+  const m = parseInt(document.getElementById('f-m').value) || 0;
+  const s = parseInt(document.getElementById('f-s').value) || 0;
+  const total = h*3600 + m*60 + s;
+  if(total <= 0){ document.getElementById('f-m').focus(); return; }
+
+  const timer = {
+    id: idCounter++, name, totalSec: total, remainingSec: total,
+    running:false, done:false, color: selectedColor, targetEndTime:null, intervalId:null
+  };
+  timers.push(timer);
+  document.getElementById('f-name').value = '';
+  render();
+  saveTimers();
+  startTimer(timer.id);
+}
+
+function resumeInterval(id){
+  const t = timers.find(x=>x.id===id);
+  if(!t) return;
+  t.intervalId = setInterval(()=>tick(t.id), 1000);
+}
+
+function startTimer(id){
+  const t = timers.find(x=>x.id===id);
+  if(!t || t.running || t.done) return;
+  t.running = true;
+  t.targetEndTime = Date.now() + t.remainingSec*1000;
+  t.intervalId = setInterval(()=>tick(t.id), 1000);
+  render();
+  saveTimers();
+}
+
+function tick(id){
+  const t = timers.find(x=>x.id===id);
+  if(!t || !t.running) return;
+  const remaining = Math.round((t.targetEndTime - Date.now())/1000);
+  t.remainingSec = Math.max(0, remaining);
+  if(remaining <= 0){
+    t.running = false; t.done = true; t.targetEndTime = null;
+    clearInterval(t.intervalId);
+    triggerAlert(t);
+  }
+  render();
+  saveTimers();
+}
+
+function pauseTimer(id){
+  const t = timers.find(x=>x.id===id);
+  if(!t) return;
+  if(t.targetEndTime){
+    t.remainingSec = Math.max(0, Math.round((t.targetEndTime - Date.now())/1000));
+  }
+  t.running = false; t.targetEndTime = null;
+  clearInterval(t.intervalId);
+  render();
+  saveTimers();
+}
+
+function resetTimer(id){
+  const t = timers.find(x=>x.id===id);
+  if(!t) return;
+  clearInterval(t.intervalId);
+  t.running = false; t.done = false; t.targetEndTime = null; t.remainingSec = t.totalSec;
+  render();
+  saveTimers();
+}
+
+function removeTimer(id){
+  const t = timers.find(x=>x.id===id);
+  if(t) clearInterval(t.intervalId);
+  timers = timers.filter(x=>x.id!==id);
+  render();
+  saveTimers();
+}
+
+function fmt(sec){
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = sec%60;
+  const pad = n => String(n).padStart(2,'0');
+  return h>0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+function render(){
+  emptyMsg.style.display = timers.length ? 'none' : 'block';
+  grid.innerHTML = timers.map(t=>{
+    const pct = t.totalSec>0 ? (t.remainingSec/t.totalSec) : 0;
+    const r = 52;
+    const c = 2*Math.PI*r;
+    const offset = c*(1-pct);
+    return `
+    <div class="card colored ${t.done?'done':''}" style="--tcolor:${t.color}">
+      <div class="card-top">
+        <div class="card-name"><span class="dot"></span>${escapeHtml(t.name)}</div>
+        <button class="remove-btn" title="ลบ" onclick="removeTimer(${t.id})">✕</button>
+      </div>
+      <div class="ring-wrap">
+        <svg class="ring" width="130" height="130" viewBox="0 0 130 130">
+          <circle class="ring-bg" cx="65" cy="65" r="${r}"></circle>
+          <circle class="ring-fg" cx="65" cy="65" r="${r}"
+            stroke-dasharray="${c}" stroke-dashoffset="${offset}"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="time-display">${fmt(t.remainingSec)}</div>
+          <div class="time-label">${t.done ? 'ครบเวลา' : (t.running ? 'กำลังนับ' : 'หยุดชั่วคราว')}</div>
+        </div>
+      </div>
+      <div class="controls">
+        ${t.done
+          ? `<button class="ctrl-btn primary" onclick="resetTimer(${t.id})">เริ่มใหม่</button>`
+          : t.running
+            ? `<button class="ctrl-btn" onclick="pauseTimer(${t.id})">หยุดชั่วคราว</button>`
+            : `<button class="ctrl-btn primary" onclick="startTimer(${t.id})">เริ่ม</button>`
+        }
+        <button class="ctrl-btn" onclick="resetTimer(${t.id})">รีเซ็ต</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ---- Alert: sound + visual ----
+function beep(){
+  try{
+    if(!alarmCtx) alarmCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = alarmCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  }catch(e){}
+}
+
+function startAlarmSound(){
+  if(customSound){
+    customAudioEl = new Audio(customSound.dataUrl);
+    customAudioEl.loop = true;
+    customAudioEl.play().catch(()=>{});
+  } else {
+    beep();
+    if(alarmInterval) clearInterval(alarmInterval);
+    alarmInterval = setInterval(beep, 900);
+  }
+}
+
+function stopAlarmSound(){
+  if(customAudioEl){
+    customAudioEl.pause();
+    customAudioEl.currentTime = 0;
+    customAudioEl = null;
+  }
+  if(alarmInterval){ clearInterval(alarmInterval); alarmInterval = null; }
+}
+
+function triggerAlert(t){
+  alertName.textContent = t.name;
+  alertBox.style.setProperty('--tcolor', t.color);
+  overlay.classList.add('show');
+  startAlarmSound();
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try{ new Notification('ถึงเวลาแล้ว!', { body: t.name }); }catch(e){}
+  }
+  document.title = '⏰ ถึงเวลาแล้ว! — ' + t.name;
+}
+
+function dismissAlert(){
+  overlay.classList.remove('show');
+  stopAlarmSound();
+  document.title = 'ตัวจับเวลาถอยหลัง';
+}
+
+// ---------- grid tracker logic ----------
+function addTracker(){
+  const nameInput = document.getElementById('gt-name');
+  const priceInput = document.getElementById('gt-price');
+  const rowsInput = document.getElementById('gt-rows');
+  const colsInput = document.getElementById('gt-cols');
+  const name = nameInput.value.trim() || 'ไม่มีชื่อ';
+  const price = parseFloat(priceInput.value) || 0;
+  let rows = parseInt(rowsInput.value) || 10;
+  let cols = parseInt(colsInput.value) || 10;
+  rows = Math.min(50, Math.max(1, rows));
+  cols = Math.min(50, Math.max(1, cols));
+  const tracker = {
+    id: gtIdCounter++,
+    name,
+    rows, cols,
+    pricePerRound: price,
+    cells: new Array(rows*cols).fill(false)
+  };
+  trackers.push(tracker);
+  nameInput.value = '';
+  renderTrackers();
+  saveTrackers();
+}
+
+function toggleCell(trackerId, idx){
+  const t = trackers.find(x=>x.id===trackerId);
+  if(!t) return;
+  t.cells[idx] = !t.cells[idx];
+  renderTrackers();
+  saveTrackers();
+}
+
+function updateTrackerPrice(trackerId, value){
+  const t = trackers.find(x=>x.id===trackerId);
+  if(!t) return;
+  t.pricePerRound = parseFloat(value) || 0;
+  renderTrackers();
+  saveTrackers();
+}
+
+function clearTracker(trackerId){
+  const t = trackers.find(x=>x.id===trackerId);
+  if(!t) return;
+  t.cells = new Array(t.rows*t.cols).fill(false);
+  renderTrackers();
+  saveTrackers();
+}
+
+function fillTracker(trackerId){
+  const t = trackers.find(x=>x.id===trackerId);
+  if(!t) return;
+  t.cells = new Array(t.rows*t.cols).fill(true);
+  renderTrackers();
+  saveTrackers();
+}
+
+function removeTracker(trackerId){
+  trackers = trackers.filter(x=>x.id!==trackerId);
+  renderTrackers();
+  saveTrackers();
+}
+
+function money(n){
+  return n.toLocaleString('th-TH', {maximumFractionDigits:2});
+}
+
+function renderTrackers(){
+  gtEmptyMsg.style.display = trackers.length ? 'none' : 'block';
+  gtList.innerHTML = trackers.map(t=>{
+    const doneCount = t.cells.filter(Boolean).length;
+    const totalCells = t.rows * t.cols;
+    const total = doneCount * (t.pricePerRound || 0);
+    const cellsHtml = t.cells.map((done, i)=>`
+      <div class="gt-cell ${done ? 'done' : 'notdone'}" onclick="toggleCell(${t.id},${i})">${i+1}</div>
+    `).join('');
+    return `
+    <div class="gt-card">
+      <div class="gt-top">
+        <div>
+          <div class="gt-name">${escapeHtml(t.name)}</div>
+          <div class="gt-meta">ตาราง ${t.rows} × ${t.cols} = ${totalCells} ช่อง</div>
+        </div>
+        <div class="gt-price-edit">
+          ราคา/รอบ
+          <input type="number" min="0" value="${t.pricePerRound}" onchange="updateTrackerPrice(${t.id}, this.value)">
+          บาท
+        </div>
+      </div>
+      <div class="gt-summary">
+        <div>ทำแล้ว <b>${doneCount}</b> / ${totalCells} รอบ</div>
+        <div class="money">รวมเป็นเงิน <b>${money(total)} บาท</b></div>
+      </div>
+      <div class="gt-cells" style="grid-template-columns:repeat(${t.cols}, 1fr);">${cellsHtml}</div>
+      <div class="gt-actions">
+        <button class="gt-btn" onclick="fillTracker(${t.id})">ติ๊กเขียวทั้งหมด</button>
+        <button class="gt-btn" onclick="clearTracker(${t.id})">ล้างทั้งหมด</button>
+        <button class="gt-btn danger" onclick="removeTracker(${t.id})">ลบตารางนี้</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---------- init ----------
+(function init(){
+  loadTimers();
+  loadTrackers();
+  loadCustomSound();
+})();
+</script>
+</body>
+</html>
